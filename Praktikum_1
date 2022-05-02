@@ -1,0 +1,229 @@
+import java.lang.Exception
+
+// 1. Die Klasse "Uhrzeit"
+
+class Time constructor( hour_param : Int, minute_param : Int){
+    // Eigenschaft Stunde mit Gültigkeitsprüfung & Initialisierung
+    var hour = hour_param
+        set(value) {
+            if (value < 0 || value > 23) throw Exception ("Ungültige Eingabe")
+            field = value
+        }
+    init {
+        hour = hour_param
+    }
+
+    // Eigenschaft Minute mit Gültigkeitsprüfung & Initialisierung
+    var minute = minute_param
+        set(value) {
+            if (value < 0 || value > 59) throw Exception("Ungültige Eingabe")
+            field = value
+        }
+    init {
+        minute = minute_param
+    }
+}
+
+/*fun main(){
+
+    val time1 = Time(12,0) //val time1 = Time(12,00) geht nicht wegen 'too many arguments for public constructor'
+    val time2 = Time(8,30)
+    //val time3 = Time(26,120) // invalide Uhrzeit. Code soll crashen !
+    //val time4 = Time(-5,-10) // invalide Uhrzeit. Code soll crashen !
+
+    println("Parkticket 1 hat die Uhrzeit ${time1.hour}:${time1.minute}.")
+    println("Parkticket 2 hat die Uhrzeit ${time2.hour}:${time2.minute}.")
+    //println("Parkticket 3 hat die Uhrzeit ${time3.hour}:${time3.minute}.")
+    //println("Parkticket 4 hat die Uhrzeit ${time4.hour}:${time4.minute}.")
+
+}*/
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+// 2. Die Klasse Parkschein
+
+class ParkTicket(private val entryTime : Time){ //entryTime auf private gesetzt Aufgabe 5. Sicherheitsmodifikatoren
+
+    private var exitTime : Time ?= null // exitTime auf private gesetzt Aufgabe 5. Sicherheitsmodifikatoren
+
+// hinzugefügt durch 4.3 Methoden auf mehreren Parkscheinen
+val isCheckedOut : Boolean
+        get() = this.exitTime != null
+
+/*    fun parkingDuration() : Int{
+        var duration = 0
+        if(exitTime != null){
+            duration = (exitTime!!.hour - entryTime.hour)*60 // !! = nicht null operator
+            duration += exitTime!!.minute - entryTime.minute
+        }else{
+            throw Exception("Parkticket muss vorher korrekt abgestempelt werden")
+        }
+        return duration
+    }*/
+
+    val parkingDuration : Int
+        get() = this.parkingDuration()
+
+    private fun parkingDuration() : Int { // parkingDuration auf private gesetzt Aufgabe 5. Sicherheitsmodifikatoren
+        val exitTime = exitTime ?: throw Exception("Vorher invalidieren") // siehe Notizen Elvis operator (Hilfe von Kommilitone) If Ausdruck idk
+        var duration = (exitTime.hour - entryTime.hour)*60
+        duration += exitTime.minute - entryTime.minute
+        return duration
+    }
+
+    fun hoursStarted() : Int{
+        val duration = parkingDuration()/60
+        if(parkingDuration()%60 == 0){
+            return duration
+        }
+        return duration + 1
+    }
+
+    fun checkout (exitTime : Time){
+        if(exitTime.hour > this.entryTime.hour || (exitTime.hour == this.entryTime.hour && exitTime.minute > this.entryTime.minute)){
+            this.exitTime = exitTime
+        }else{
+            throw Exception("Fehler: Ausfahrtszeit liegt vor Einfahrtszeit")
+        }
+    }
+}
+
+/*fun main(){
+    val entryTime = Time(12,0)
+    val ticket = ParkTicket(entryTime)
+    ticket.checkout(Time(12,30)) // funktioniert, weil 12:00 < 12:30
+    println(ticket.parkingDuration) // gibt 30 aus
+    println(ticket.hoursStarted()) // gibt 1 aus
+
+    val ticket2 = ParkTicket(Time(12,30))
+    ticket2.checkout(Time(13,40)) // funktioniert, weil 12:00 < 13:40
+    println(ticket2.parkingDuration) // gibt 70 aus
+    println(ticket2.hoursStarted()) // gibt 2 aus
+
+    //val ticket3 = ParkTicket(Time(12,30))
+    //ticket3.checkout(Time(11,20)) // Fehler: Ausfahrtszeit liegt vor Einfahrtszeit ( 11:20 !< 12:30 )
+}*/
+
+// 2.4. Berechnete Eigenschaften
+// "parkingDuration" und "hoursStarted" sind eher berechnete Methoden.
+// Methoden bewirken, dass mit einem Objekt etwas passiert,
+// während Eigenschaften Informationen über das Objekt zurückgeben,
+// sodass sich die Qualität des Objekts "ParkTicket" ändert.
+// Methoden sind Aktionen und Eigenschaften sind Qualitäten.
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+// 3. Parktarif
+
+enum class Tariff{
+    DEFAULT, EVENT, WEEKEND; //DEFAULT = STANDARD aus Aufgabenstellung damit der Code funktioniert
+
+    fun price() : Double = when (this){
+        DEFAULT -> 1.99
+        EVENT -> 1.49
+        WEEKEND -> 2.99
+    }
+}
+
+/*fun main(){
+    val default = Tariff.STANDARD
+    println(default.price()) // Gibt 1.99 aus
+
+    val event = Tariff.EVENT
+    println(event.price())
+
+    val weekend = Tariff.WEEKEND
+    println(weekend.price()) // Gibt 2.99 aus
+}*/
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+// 4. Parkautomat
+
+class TicketMachine(private val tarif : Tariff){ // tarif auf private gesetzt Aufgabe 5. Sicherheitsmodifikatoren
+    private val ticketListe = mutableListOf<ParkTicket>() // ticketListe auf private gesetzt Aufgabe 5. Sicherheitsmodifikatoren
+
+    fun generate(entryTime: Time): ParkTicket{
+        val parkticket = ParkTicket(entryTime)
+        ticketListe.add(parkticket)
+        return parkticket
+    }
+
+    private fun validTickets():MutableList<ParkTicket>{
+        val validTickets = mutableListOf<ParkTicket>()
+        for(ticket in ticketListe){
+            if (ticket.isCheckedOut){
+                validTickets.add(ticket)
+            }
+        }
+        return validTickets
+    }
+
+/*    fun shortestParkingDuration() : Int{
+        var validTickets = validTickets()
+        var shortPark = validTickets[0].parkingDuration
+        for(ticket in validTickets){
+            if(ticket.parkingDuration < shortPark){
+                shortPark = ticket.parkingDuration
+            }
+        }
+        return shortPark
+    }*/
+    fun shortestParkingDuration() : Int = validTickets().minByOrNull { it.parkingDuration }?.parkingDuration ?: 0 // verstehe nicht, warum it geht aber ParkTicket nicht
+
+/*    fun averageParkingDuration() : Int{
+        validTickets()
+        var averageParking = 0
+        var count = 0
+        for (ticket in validTickets()){
+            averageParking += ticket.parkingDuration
+            count++
+        }
+        return averageParking / count
+    }*/
+
+    fun averageParkingDuration() : Int = validTickets().sumBy { it.parkingDuration } / validTickets().size // Use sumOf (aber wie verstehe ich nicht)
+
+    fun revenues() : Double {
+        var einnahme = 0.0
+        val preis = tarif.price()
+        for (ticket in validTickets()){
+            einnahme += ticket.hoursStarted().toDouble()
+        }
+        return  einnahme * preis
+    }
+}
+
+fun main(){
+    val machine = TicketMachine(Tariff.DEFAULT)
+    val ticket1 = machine.generate(Time(12,0))
+    val ticket2 = machine.generate(Time(12,30))
+    val ticket3 = machine.generate(Time(13,30))
+    val ticket4 = machine.generate(Time(13,30)) // never used
+
+    ticket1.checkout(Time(12,30))
+    ticket2.checkout(Time(13,30))
+    ticket3.checkout(Time(14,50))
+    // ticket4 wird nicht abgestempelt und wird daher für alle folgenden Methodenaufrufe nicht berücksichtigt
+
+    println(machine.shortestParkingDuration())
+    println(machine.averageParkingDuration())
+    println(machine.revenues())
+}
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+
+// 5. Sichtbarkeitsmodifikatoren
+
+/*
+fun main(){
+    val machine = TicketMachine(Tariff.DEFAULT)
+    val ticket5 = machine.generate(Time(12,0))
+    ticket5.exitTime = Time(10,0)
+}*/
+
+/*--------------------------------------------------------------------------------------------------------------------*/
+// Notizen
+// Safe Calls "?." = sicherer Aufrufoperator für Zugriff auf eine Eigenschaft einer null Variable
+// Elvis operator "?:" = Anstatt des kompletten if-Ausdrucks zu schreiben Elvis operator nutzen
+// !!-Operator = Nicht Null Behauptungsoperator, wandel jeden Wert in Nicht-Null-Typ um und löst eine Ausnahme aus, wenn der Wert Null ist.
